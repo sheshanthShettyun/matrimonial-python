@@ -20,6 +20,11 @@ export default function ProfileDetailsPage() {
   const [isMatched, setIsMatched] = useState(false);
   const [showMailNotification, setShowMailNotification] = useState(false);
 
+  // DEMO HARDCODE: Sriyaan (user_id 1) -> Priya (user_id 2) always gets
+  // the mail + effects moment, regardless of the real mutual-match state.
+  const PRIYA_DEMO_USER_ID = 2;
+  const SRIYAAN_DEMO_SENDER_ID = 1;
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -34,6 +39,34 @@ export default function ProfileDetailsPage() {
     };
     load();
   }, [id]);
+
+  // Records WHO matched: the phone pops up only for Priya (user_id 2).
+  const recordMatch = (theirId: number) => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("isMatched", "true");
+    localStorage.setItem("matchedUserId", String(theirId));
+    window.dispatchEvent(new CustomEvent("heartmate_matched", { detail: { userId: theirId } }));
+  };
+
+  // Check if already matched with this person on page load
+  useEffect(() => {
+    const checkExistingMatch = async () => {
+      const myId = user?.userId;
+      const theirId = targetProfile?.user?.userId;
+      if (!myId || !theirId || myId === theirId) return;
+      try {
+        const res = await interestApi.checkMatch(myId, theirId);
+        if (res.data.matched && typeof window !== "undefined") {
+          setIsMatched(true);
+          setMessage("It's a Match! ♥");
+          recordMatch(theirId);
+        }
+      } catch {
+        // Silently ignore — match check is best-effort
+      }
+    };
+    checkExistingMatch();
+  }, [user?.userId, targetProfile?.user?.userId]);
 
   // Real-time Chroma Key (Green Screen Removal) via Canvas
   useEffect(() => {
@@ -72,20 +105,11 @@ export default function ProfileDetailsPage() {
   const triggerMatch = () => {
     setShowMailNotification(false);
 
-    // Only hard-match with Priya Patel (userId 2)
-    if (targetProfile?.user?.userId !== 2) {
-      setMessage("Interest sent!");
-      return;
-    }
-
     setMessage("It's a Match! ♥");
     setIsMatched(true);
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("isMatched", "true");
-      localStorage.setItem("matchPartner", "priya");
-      window.dispatchEvent(new CustomEvent("heartmate_matched"));
-    }
+    const theirId = targetProfile?.user?.userId;
+    if (theirId) recordMatch(theirId);
     
     // Trigger confetti
     const end = Date.now() + 3 * 1000;
@@ -127,18 +151,49 @@ export default function ProfileDetailsPage() {
     }
     try {
       await interestApi.send(senderId, targetProfile!.user!.userId!);
-      
-      setMessage("Interest sent! Waiting for their response.");
 
-      // Only show mail notification for Priya Patel (userId 2)
-      if (targetProfile?.user?.userId === 2) {
+      // DEMO HARDCODE: Sriyaan -> Priya shows matched immediately, then the
+      // mail notification pops after 3s (clicking it plays the effects).
+      // Bypasses the real mutual-match check below.
+      if (senderId === SRIYAAN_DEMO_SENDER_ID && targetProfile!.user!.userId === PRIYA_DEMO_USER_ID) {
+        setMessage("It's a Match! ♥");
+        setIsMatched(true);
+        recordMatch(PRIYA_DEMO_USER_ID);
         setTimeout(() => {
           setShowMailNotification(true);
         }, 3000);
+        return;
       }
+
+      // Check if this send created a mutual match
+      try {
+        const matchRes = await interestApi.checkMatch(senderId, targetProfile!.user!.userId!);
+        if (matchRes.data.matched) {
+          setTimeout(() => {
+            setShowMailNotification(true);
+          }, 3000);
+          return;
+        }
+      } catch {
+        // Fall through to default message if match check fails
+      }
+
+      setMessage("Interest sent! Waiting for their response.");
 
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.response?.data?.error || "Could not send interest.";
+      // DEMO HARDCODE: seed data already holds a PENDING Sriyaan->Priya interest,
+      // which makes re-sending fail — still play the demo moment: matched now,
+      // mail pops after 3s.
+      if (senderId === SRIYAAN_DEMO_SENDER_ID && targetProfile?.user?.userId === PRIYA_DEMO_USER_ID && msg.includes("already pending")) {
+        setMessage("It's a Match! ♥");
+        setIsMatched(true);
+        recordMatch(PRIYA_DEMO_USER_ID);
+        setTimeout(() => {
+          setShowMailNotification(true);
+        }, 3000);
+        return;
+      }
       setError(msg);
     }
   };

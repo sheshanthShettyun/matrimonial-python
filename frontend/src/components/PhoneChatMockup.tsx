@@ -12,6 +12,8 @@ interface Message {
 
 export function PhoneChatMockup() {
   const pathname = usePathname();
+  // Phone is visible ONLY on a match with Priya (user_id 2) — never globally.
+  const PRIYA_USER_ID = "2";
   const [visible, setVisible] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
@@ -29,18 +31,25 @@ export function PhoneChatMockup() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check match state on every mount and route change
+    // Check Priya-match state on every mount and route change.
+    // Stale "isMatched" without a Priya matchedUserId stays hidden.
+    const isPriyaMatch = () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem("isMatched") === "true" &&
+      localStorage.getItem("matchedUserId") === PRIYA_USER_ID;
+
     const checkMatch = () => {
-      if (typeof window !== "undefined") {
-        setVisible(localStorage.getItem("isMatched") === "true");
-        setIsOpen(false);
-      }
+      setVisible(isPriyaMatch());
+      setIsOpen(false);
     };
     checkMatch();
 
-    const onMatch = () => {
-      setVisible(true);
-      setIsOpen(false);
+    const onMatch = (e: Event) => {
+      const userId = (e as CustomEvent)?.detail?.userId;
+      if (String(userId ?? "") === PRIYA_USER_ID) {
+        setVisible(true);
+        setIsOpen(true); // pop the phone open on a Priya match
+      }
     };
 
     const onReset = () => {

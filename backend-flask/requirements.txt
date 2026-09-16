@@ -1,0 +1,9 @@
+Flask>=3.1,<4
+Flask-SQLAlchemy>=3.1,<4
+Flask-Migrate>=4.0,<5
+Flask-CORS>=5.0,<7
+Flask-Bcrypt>=1.0,<2
+marshmallow>=3.21,<5
+PyMySQL>=1.1,<2
+python-dotenv>=1.0,<2
+pytest>=8.0,<9

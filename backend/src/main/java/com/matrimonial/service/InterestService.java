@@ -68,6 +68,15 @@ public class InterestService {
         interestRepository.delete(interest);
     }
 
+    /**
+     * A match exists when both users have ACCEPTED interests toward each other.
+     * One-directional accept is not enough — chat unlocks only on mutual match.
+     */
+    public boolean isMatched(Long user1Id, Long user2Id) {
+        return interestRepository.existsBySenderUserIdAndReceiverUserIdAndStatus(user1Id, user2Id, ACCEPTED)
+                && interestRepository.existsBySenderUserIdAndReceiverUserIdAndStatus(user2Id, user1Id, ACCEPTED);
+    }
+
     private Interest updateStatus(Long interestId, String status) {
         Interest interest = getInterestById(interestId);
         interest.setStatus(status);

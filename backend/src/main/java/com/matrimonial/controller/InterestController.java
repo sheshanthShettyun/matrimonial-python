@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/interests")
@@ -50,5 +51,11 @@ public class InterestController {
     public ResponseEntity<Void> deleteInterest(@PathVariable Long interestId) {
         interestService.deleteInterest(interestId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/match")
+    public ResponseEntity<Map<String, Boolean>> checkMatch(
+            @RequestParam Long user1, @RequestParam Long user2) {
+        return ResponseEntity.ok(Map.of("matched", interestService.isMatched(user1, user2)));
     }
 }

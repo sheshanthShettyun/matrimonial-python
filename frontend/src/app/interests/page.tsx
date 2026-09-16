@@ -62,10 +62,24 @@ function InterestsContent() {
     if (currentUserId) loadInterests();
   }, [currentUserId]);
 
-  const handleAccept = async (id: number) => {
+  const handleAccept = async (id: number, partnerUserId?: number) => {
     try {
       await interestApi.accept(id);
       await loadInterests();
+
+      // Check if this accept created a mutual match → unlock chat
+      if (currentUserId && partnerUserId) {
+        try {
+          const matchRes = await interestApi.checkMatch(currentUserId, partnerUserId);
+          if (matchRes.data.matched && typeof window !== "undefined") {
+            localStorage.setItem("isMatched", "true");
+            localStorage.setItem("matchedUserId", String(partnerUserId));
+            window.dispatchEvent(new CustomEvent("heartmate_matched", { detail: { userId: partnerUserId } }));
+          }
+        } catch {
+          // Silently ignore — match check is best-effort
+        }
+      }
     } catch {
       setError("Failed to accept interest");
     }
@@ -213,7 +227,7 @@ function InterestsContent() {
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 {activeTab === "received" && interest.status === "PENDING" && (
                   <>
-                    <PixelButton onClick={() => handleAccept(interest.interestId!)}>
+                    <PixelButton onClick={() => handleAccept(interest.interestId!, interest.sender?.userId)}>
                       Accept ♥
                     </PixelButton>
                     <PixelButton variant="danger" onClick={() => handleReject(interest.interestId!)}>

@@ -94,6 +94,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null);
       setProfile(null);
+      // Clear match state so the chat phone hides until the next match.
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("isMatched");
+        localStorage.removeItem("matchedUserId");
+        window.dispatchEvent(new CustomEvent("heartmate_reset"));
+      }
       router.push("/login");
     }
   };

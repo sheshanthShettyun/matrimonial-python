@@ -89,6 +89,8 @@ export const interestApi = {
   accept: (id: number) => api.put<Interest>(`/interests/${id}/accept`),
   reject: (id: number) => api.put<Interest>(`/interests/${id}/reject`),
   delete: (id: number) => api.delete(`/interests/${id}`),
+  checkMatch: (user1: number, user2: number) =>
+    api.get<{ matched: boolean }>(`/interests/match`, { params: { user1, user2 } }),
 };
 
 export default api;
